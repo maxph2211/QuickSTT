@@ -1,0 +1,13 @@
+scipy
+matplotlib
+numpy
+torch
+torchaudio
+streamlit
+audiomentations
+pydub
+librosa
+flask
+ffprobe
+transformers
+ffmpeg

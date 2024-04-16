@@ -1,7 +1,14 @@
 QuickSTT
 =====
 
-This time, I provide quick code with streamlit for asr demo, you can run:
+This time, I provide quick code with streamlit for asr demo, you can simply run:
+
+```
+docker-compose up -d --build
+
+```
+
+or manually seting up the environment and run the app: 
 
 ```
 
