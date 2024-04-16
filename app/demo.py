@@ -8,10 +8,13 @@ import librosa.display
 from scipy.io import wavfile
 import pydub
 import sys
-import torch
+import torchaudio
 sys.path.append('.')
 plt.rcParams["figure.figsize"] = (10, 7)
 import requests
+import sys
+sys.path.append('/Users/maxph2211/Downloads/ffmpeg-7.0')
+from scipy.io import wavfile
 
 
 def create_pipeline(transformations: list):
@@ -32,12 +35,15 @@ def create_audio_player(audio_data, sample_rate):
 
 def plot_wave(y, sr):
     fig, ax = plt.subplots()
-    
 
-    img = librosa.display.waveshow(y, sr=sr, x_axis="time", ax=ax)
+    # Check if prop_cycler is available in the current Axes object
+    if hasattr(ax, 'prop_cycle'):
+        # If available, reset the property cycle to default
+        ax.set_prop_cycle(None)
+
+    img = librosa.display.waveshow(y, sr=sr, x_axis="time", ax=ax, color='skyblue')
 
     return plt.gcf()
-
 
 def plot_transformation(y, sr, transformation_name):
     D = librosa.stft(y)  # STFT of y
@@ -60,19 +66,20 @@ def plot_audio_transformations(y, sr, pipeline: audiomentations.Compose):
     col1, col2, col3 = st.columns(cols)
     with col1:
         st.markdown(
-            f"<h4 style='text-align: center; color: black;'>Original</h5>",
-            unsafe_allow_html=True,
-        )
-        st.pyplot(plot_transformation(y, sr, "Original"))
-    with col2:
-        st.markdown(
             f"<h4 style='text-align: center; color: black;'>Wave plot </h5>",
             unsafe_allow_html=True,
         )
         st.pyplot(plot_wave(y, sr))
+    with col2:
+        st.markdown(
+            f"<h4 style='text-align: center; color: black;'>Feature Plot</h5>",
+            unsafe_allow_html=True,
+        )
+        st.pyplot(plot_transformation(y, sr, "STFT"))
+
     with col3:
         st.markdown(
-            f"<h4 style='text-align: center; color: black;'>Audio</h5>",
+            f"<h4 style='text-align: center; color: black;'>Audio Player</h5>",
             unsafe_allow_html=True,
         )
         spacing()
@@ -90,24 +97,23 @@ def plot_audio_transformations(y, sr, pipeline: audiomentations.Compose):
         y = modified
 
         col1, col2, col3 = st.columns(cols)
-
         with col1:
-            st.markdown(
-                f"<h4 style='text-align: center; color: black;'>{transformation_name}</h5>",
-                unsafe_allow_html=True,
-            )
-            st.pyplot(fig)
-        with col2:
             st.markdown(
                 f"<h4 style='text-align: center; color: black;'>Wave plot </h5>",
                 unsafe_allow_html=True,
             )
             st.pyplot(plot_wave(modified, sr))
             spacing()
+        with col2:
+            st.markdown(
+                f"<h4 style='text-align: center; color: black;'>{transformation_name}</h5>",
+                unsafe_allow_html=True,
+            )
+            st.pyplot(fig)
 
         with col3:
             st.markdown(
-                f"<h4 style='text-align: center; color: black;'>Audio</h5>",
+                f"<h4 style='text-align: center; color: black;'>Audio Player</h5>",
                 unsafe_allow_html=True,
             )
             spacing()
@@ -127,8 +133,8 @@ def index_to_transformation(index: int):
         return audiomentations.Padding(p=1.0)
 
 
-@st.cache
 def handle_uploaded_audio_file(uploaded_file):
+
     a = pydub.AudioSegment.from_file(
         file=uploaded_file, format=uploaded_file.name.split(".")[-1]
     )
@@ -138,23 +144,21 @@ def handle_uploaded_audio_file(uploaded_file):
 
     fp_arr = np.array(samples).T.astype(np.float32)
     fp_arr /= np.iinfo(samples[0].typecode).max
+    wavfile.write("app/assets/test.wav", a.frame_rate, fp_arr[:, 0])
 
     return fp_arr[:, 0], a.frame_rate
 
-
 def recognize(audio):
-    url = "http://127.0.0.1:5000/recognize"  
+    url = "http://127.0.0.1:5002/recognize"  
     files = {'file': audio}
     
-    try:
-        response = requests.post(url, files=files)
-        if response.status_code == 200:
-            text = response.json().get('text', 'Recognition failed.')
-            return text
-        else:
-            return "Recognition failed. Please try again."
-    except Exception as e:
-        return f"Error occurred: {str(e)}"
+    response = requests.post(url, files=files)
+    if response.status_code == 200:
+        text = response.json().get('text', 'Recognition failed.')
+        return text
+    else:
+        return "Recognition failed. Please try again."
+
 
 
 def action(file_uploader, transformations):
@@ -165,11 +169,11 @@ def action(file_uploader, transformations):
         y, sr = None, None
 
     pipeline = audiomentations.Compose(create_pipeline(transformations))
-    try:
-        plot_audio_transformations(y, sr, pipeline)
-    except:
-        print("No files selected!!!")
-    text = recognize(file_uploader)
+    
+    plot_audio_transformations(y, sr, pipeline)
+
+    text = recognize(y)
+    print(text)
     st.success(text)
     st.balloons()
 
@@ -178,13 +182,14 @@ def main():
     placeholder = st.empty()
     placeholder2 = st.empty()
     st.markdown(
-        "# Vietnamese Speech to Text App\n"
-        "Once you have chosen augmentation techniques, select or upload an audio file\n. "
-        'Then click "Apply" to start! \n\n'
+        "<div style='text-align: center;'>"
+        "<h1>Vietnamese Speech to Text App</h1>"
+        "<p>Once you have chosen augmentation techniques, select or upload an audio file. Then click 'Apply' to start!</p>"
+        "</div>",
+        unsafe_allow_html=True
     )
-
     if True:
-        col1, col2, col3 = st.columns([1,9,1])
+        col1, col2, col3 = st.columns([1,1,1])
 
         with col1:
             st.write("")
@@ -195,7 +200,12 @@ def main():
         with col3:
             st.write("")
             
-        st.success("Bksoft")
+    # st.markdown(
+    #     "<div style='text-align: center;'>"
+    #     "<h2 style='color: black;'>Bksoft ASR</h2>"
+    #     "</div>",
+    #     unsafe_allow_html=True
+    # )
     # st.sidebar.image("demo/assets/demoo.gif")
     st.sidebar.markdown("Choose the transformations here:")
     gaussian_noise = st.sidebar.checkbox("GaussianNoise")
@@ -206,7 +216,7 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.markdown("Upload an audio file here:")
     file_uploader = st.sidebar.file_uploader(
-        label="", type=[".wav", ".wave", ".flac", ".mp3", ".ogg"]
+        label="", type=[".wav", ".wave", ".flac", ".mp3", ".ogg",".m4a",".mp4"]
     )
 
     st.sidebar.markdown("---")
@@ -226,8 +236,6 @@ def main():
         )
 
 
-
-
 if __name__ == "__main__":
-    st.set_page_config(layout="wide", page_title="Audio augmentation visualization")
+    st.set_page_config(layout="wide", page_title="ASR DEMO")
     main()

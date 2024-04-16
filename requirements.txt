@@ -8,3 +8,5 @@ audiomentations
 pydub
 librosa
 flask
+ffprobe
+transformers

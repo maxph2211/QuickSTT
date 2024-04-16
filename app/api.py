@@ -3,35 +3,25 @@ import io
 import pydub
 import numpy as np
 import torchaudio
-from transformers import AutoProcessor, SeamlessM4Tv2Model
+# from transformers import AutoProcessor, SeamlessM4Tv2Model
+from transformers import pipeline
 
 app = Flask(__name__)
-processor = AutoProcessor.from_pretrained("facebook/seamless-m4t-v2-large")
-model = SeamlessM4Tv2Model.from_pretrained("facebook/seamless-m4t-v2-large")
 
-def process(uploaded_file):
-    
-    try:
-        audio_bytes = uploaded_file.read()
-        audio_io = io.BytesIO(audio_bytes)
+transcriber = pipeline("automatic-speech-recognition", model="vinai/PhoWhisper-medium")
 
-        audio = pydub.AudioSegment.from_file(audio_io)
-        channel_sounds = audio.split_to_mono()
-        samples = [s.get_array_of_samples() for s in channel_sounds]
+def process():
+    audio_path = "app/assets/test.wav"
+    audio, orig_sr = torchaudio.load(audio_path)
 
-        fp_arr = np.array(samples).T.astype(np.float32)
-        fp_arr /= np.iinfo(samples[0].typecode).max
+    resampler = torchaudio.transforms.Resample(orig_sr, 16000)
+    audio_resampled = resampler(audio)
 
-        audio, orig_freq = torchaudio.load(io.BytesIO(fp_arr.tobytes()))
-        audio = torchaudio.functional.resample(audio, orig_freq=orig_freq, new_freq=16_000)
+    audio_array = audio_resampled.numpy().squeeze()
 
-        audio_inputs = processor(audios=audio, return_tensors="pt")
-        audio_array_from_audio = model.generate(**audio_inputs, tgt_lang="vie")[0].cpu().numpy().squeeze()
+    output = transcriber(audio_array)['text']
 
-        return audio_array_from_audio
-    except Exception as e:
-        return f"Error occurred: {str(e)}"
-
+    return output
 
 
 @app.route('/recognize', methods=['POST'])
@@ -44,10 +34,10 @@ def recognize():
     if file.filename == '':
         return jsonify({'error': 'No selected file'})
 
-    text = process(file)
+    text = process()
 
     return jsonify({'text': text})
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", debug=True, port=5000)
+    app.run(host="0.0.0.0", debug=True, port=5002)
