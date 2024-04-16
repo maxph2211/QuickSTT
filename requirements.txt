@@ -2,6 +2,7 @@ scipy
 matplotlib
 numpy
 torch
+torchaudio
 streamlit
 audiomentations
 pydub

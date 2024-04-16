@@ -11,6 +11,7 @@ import sys
 import torch
 sys.path.append('.')
 plt.rcParams["figure.figsize"] = (10, 7)
+import requests
 
 
 def create_pipeline(transformations: list):
@@ -128,13 +129,7 @@ def plot_audio_transformations(y, sr, pipeline: audiomentations.Compose):
             st.audio(create_audio_player(modified, sr))
         st.markdown("---")
         plt.close("all")
-
-
-def load_audio_sample(file):
-    y, sr = librosa.load(file, sr=22050)
-
-    return y, sr
-
+        
 
 def index_to_transformation(index: int):
     if index == 0:
@@ -145,6 +140,21 @@ def index_to_transformation(index: int):
         return audiomentations.TimeMask(p=0.5)
     elif index == 3:
         return audiomentations.Padding(p=1.0)
+
+
+def recognize(file_path):
+    url = "http://127.0.0.1:5000/recognize"  # Change the URL if the API is hosted elsewhere
+    files = {'file': open(file_path, 'rb')}
+    
+    try:
+        response = requests.post(url, files=files)
+        if response.status_code == 200:
+            text = response.json().get('text', 'Recognition failed.')
+            return text
+        else:
+            return "Recognition failed. Please try again."
+    except Exception as e:
+        return f"Error occurred: {str(e)}"
 
 
 def action(file_uploader, transformations):
@@ -161,12 +171,6 @@ def action(file_uploader, transformations):
     text = recognize(file_uploader, y)
     st.success(text)
     st.balloons()
-
-
-def recognize(file_path, audio):
-    ds = {}
-    
-    return None
 
 
 def main():
