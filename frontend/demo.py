@@ -149,7 +149,7 @@ def handle_uploaded_audio_file(uploaded_file):
     return fp_arr[:, 0], a.frame_rate
 
 def recognize(audio):
-    url = "http://127.0.0.1:5002/recognize"  
+    url = "http://backend:5002/recognize"  
     files = {'file': audio}
     
     response = requests.post(url, files=files)
