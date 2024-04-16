@@ -16,10 +16,12 @@ conda create -n asr python=3.9
 
 conda activate asr
 
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
+
+python backend/api.py
 
 pip install git+https://github.com/huggingface/transformers.git sentencepiece
 
-streamlit run demo/app.py
+streamlit run frontend/demo.py
 
 ```
