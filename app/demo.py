@@ -30,21 +30,6 @@ def create_audio_player(audio_data, sample_rate):
     return virtualfile
 
 
-@st.cache
-def handle_uploaded_audio_file(uploaded_file):
-    a = pydub.AudioSegment.from_file(
-        file=uploaded_file, format=uploaded_file.name.split(".")[-1]
-    )
-
-    channel_sounds = a.split_to_mono()
-    samples = [s.get_array_of_samples() for s in channel_sounds]
-
-    fp_arr = np.array(samples).T.astype(np.float32)
-    fp_arr /= np.iinfo(samples[0].typecode).max
-
-    return fp_arr[:, 0], a.frame_rate
-
-
 def plot_wave(y, sr):
     fig, ax = plt.subplots()
     
@@ -142,9 +127,24 @@ def index_to_transformation(index: int):
         return audiomentations.Padding(p=1.0)
 
 
-def recognize(file_path):
-    url = "http://127.0.0.1:5000/recognize"  # Change the URL if the API is hosted elsewhere
-    files = {'file': open(file_path, 'rb')}
+@st.cache
+def handle_uploaded_audio_file(uploaded_file):
+    a = pydub.AudioSegment.from_file(
+        file=uploaded_file, format=uploaded_file.name.split(".")[-1]
+    )
+
+    channel_sounds = a.split_to_mono()
+    samples = [s.get_array_of_samples() for s in channel_sounds]
+
+    fp_arr = np.array(samples).T.astype(np.float32)
+    fp_arr /= np.iinfo(samples[0].typecode).max
+
+    return fp_arr[:, 0], a.frame_rate
+
+
+def recognize(audio):
+    url = "http://127.0.0.1:5000/recognize"  
+    files = {'file': audio}
     
     try:
         response = requests.post(url, files=files)
@@ -160,6 +160,7 @@ def recognize(file_path):
 def action(file_uploader, transformations):
     if file_uploader is not None:
         y, sr = handle_uploaded_audio_file(file_uploader)
+        print("Sampling Rate: ", sr)
     else:
         y, sr = None, None
 
@@ -168,7 +169,7 @@ def action(file_uploader, transformations):
         plot_audio_transformations(y, sr, pipeline)
     except:
         print("No files selected!!!")
-    text = recognize(file_uploader, y)
+    text = recognize(file_uploader)
     st.success(text)
     st.balloons()
 
