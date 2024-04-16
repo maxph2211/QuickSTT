@@ -26,7 +26,7 @@ def process(uploaded_file):
         audio = torchaudio.functional.resample(audio, orig_freq=orig_freq, new_freq=16_000)
 
         audio_inputs = processor(audios=audio, return_tensors="pt")
-        audio_array_from_audio = model.generate(**audio_inputs, tgt_lang="rus")[0].cpu().numpy().squeeze()
+        audio_array_from_audio = model.generate(**audio_inputs, tgt_lang="vie")[0].cpu().numpy().squeeze()
 
         return audio_array_from_audio
     except Exception as e:
@@ -50,4 +50,4 @@ def recognize():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host="0.0.0.0", debug=True, port=5000)
